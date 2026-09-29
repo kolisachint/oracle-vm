@@ -244,11 +244,11 @@ codex "hello"   # needs OPENAI_API_KEY
 
 ## Hoocowork server
 
-Hoocowork runs as a systemd service and starts automatically on every boot. The unit is hardened for the 1 GB E2.1.Micro:
+Hoocowork runs as a systemd service and starts automatically on every boot. The unit is hardened so a runaway process can't take down the VM:
 
 - `Restart=always` — restarts on any exit
 - `OOMPolicy=continue` — prevents kernel OOM kills from being treated as a clean stop (so `Restart=always` still fires)
-- `MemoryMax=600M` — caps the process so an OOM never starves sshd or the system
+- `MemoryMax` — half of RAM on A1.Flex (800M on the 1 GB E2.1.Micro); caps the process so an OOM never starves sshd or the system
 - `StartLimitBurst=10` / `StartLimitIntervalSec=300` — survives crash loops without giving up
 
 ### `hoocowork-health` — one-command status / restart / logs
@@ -304,7 +304,7 @@ sudo systemctl disable --now upgrade-clis.timer
 | SSH | `PasswordAuthentication no`, `PermitRootLogin no`, `MaxAuthTries 3` |
 | Patching | `unattended-upgrades` enabled — security updates apply automatically |
 | CLI auto-upgrade | `upgrade-clis.timer` runs nightly (~03:00 UTC), pulls `@latest` for hoocowork, Claude, Codex, Opencode, hoocode-agent, bun |
-| Service | `Restart=always`, `OOMPolicy=continue`, `MemoryMax=600M` — hoocowork survives OOM kills |
+| Service | `Restart=always`, `OOMPolicy=continue`, `MemoryMax` capped — hoocowork survives OOM kills |
 
 ---
 
@@ -313,11 +313,12 @@ sudo systemctl disable --now upgrade-clis.timer
 | Symptom | Cause | Fix |
 |---|---|---|
 | `401 NotAuthenticated` on terraform plan | Wrong OCID, fingerprint, or key path | Re-check `terraform.tfvars` |
-| `Out of host capacity` | A1 Flex unavailable in that AD | Try `availability_domain_index = 1` |
-| Image lookup returns empty | ARM image string differs in your region | Change `operating_system_version` to `"22.04 Minimal aarch64"` in `compute.tf` |
+| `Out of host capacity` | A1 Flex unavailable in that AD | Retry later, try `availability_domain_index = 1`, upgrade the account to Pay As You Go (A1 stays free), or fall back to `instance_shape = "VM.Standard.E2.1.Micro"` |
+| Free instance stopped for being idle | OCI reclaims idle Always Free instances on free-tier accounts | Upgrade the account to Pay As You Go; Always Free resources stay $0 |
+| Image lookup returns empty | ARM image string differs in your region | Set `ubuntu_version = "24.04 Minimal aarch64"` in `terraform.tfvars` |
 | SSH connection refused after apply | Cloud-init still running | Wait 5 min, check `/var/log/setup-vm.log` |
 | `hoocowork.service` failed | Package not yet installed | `sudo npm install -g @kolisachint/hoocowork && sudo systemctl restart hoocowork` |
-| `hoocowork` keeps OOM-restarting | 1 GB RAM is tight; another process is heavy | Run `hoocowork-health` to inspect, then stop other npm processes. Service will self-recover. |
+| `hoocowork` keeps OOM-restarting | Hitting `MemoryMax` (tight on the 1 GB Micro); another process is heavy | Run `hoocowork-health` to inspect, then stop other npm processes. Service will self-recover. |
 | Port 8080 unreachable | OCI firewall + Ubuntu firewall | OCI security list is open; also run `sudo iptables -I INPUT -p tcp --dport 8080 -j ACCEPT` |
 | `gh auth login` hangs | Device flow needs browser | Open `https://github.com/login/device` on any device and enter the code shown |
 | `ssh -T git@github.com` permission denied | SSH key not added to GitHub | Run `gh ssh-key add ~/.ssh/github_vm.pub --title "oci-vm"` |
