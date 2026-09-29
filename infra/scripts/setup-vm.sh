@@ -7,8 +7,12 @@ exec > /var/log/setup-vm.log 2>&1
 
 echo "[setup-vm] Starting at $(date)"
 
+MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+echo "[setup-vm] $(uname -m), ${MEM_MB} MB RAM"
+
 # ── Swap (npm global installs OOM on 1 GB E2.1.Micro without it) ─────────────
-if [ ! -f /swapfile ]; then
+# Skipped on A1.Flex: with 24 GB RAM, swap on a network block volume only adds latency.
+if [ "$MEM_MB" -lt 4096 ] && [ ! -f /swapfile ]; then
   fallocate -l 2G /swapfile
   chmod 600 /swapfile
   mkswap /swapfile
@@ -153,9 +157,15 @@ SSHC
 sshd -t && systemctl reload ssh
 
 # ── Systemd service: hoocowork on port 8080 ──────────────────────────────────
-# Restart=always + OOMPolicy=continue: on 1 GB E2.1.Micro, the kernel may OOM-kill
-# node. Without these, systemd treats OOM as a clean stop and leaves it down.
-cat > /etc/systemd/system/hoocowork.service << 'EOF'
+# Restart=always + OOMPolicy=continue: if the kernel OOM-kills node, systemd
+# would otherwise treat it as a clean stop and leave it down.
+# MemoryMax keeps headroom for sshd: 800M on the 1 GB Micro, half of RAM on A1.
+if [ "$MEM_MB" -lt 4096 ]; then
+  HOOCOWORK_MEMORY_MAX=800M
+else
+  HOOCOWORK_MEMORY_MAX="$((MEM_MB / 2))M"
+fi
+cat > /etc/systemd/system/hoocowork.service << EOF
 [Unit]
 Description=Hoocowork Server
 After=network.target
@@ -170,7 +180,7 @@ ExecStart=/usr/bin/hoocowork --port 8080
 Restart=always
 RestartSec=5
 OOMPolicy=continue
-MemoryMax=800M
+MemoryMax=${HOOCOWORK_MEMORY_MAX}
 StandardOutput=journal
 StandardError=journal
 

@@ -1,17 +1,18 @@
 # Infrastructure — Oracle Cloud Free Tier VM
 
-Provisions an **AMD E2.1.Micro** VM (1 OCPU / 1 GB RAM, x86_64) on Oracle Cloud Infrastructure Always Free tier with a reserved public IP. On first boot the VM automatically adds 2 GB swap, installs Node.js 20, five AI CLI tools, configures git with an SSH-only push path, and starts the hoocowork server on port 8080.
+Provisions an **Ampere A1.Flex** VM (4 OCPU / 24 GB RAM, ARM64) on Oracle Cloud Infrastructure Always Free tier with a reserved public IP. On first boot the VM installs Node.js 20, five AI CLI tools, configures git with an SSH-only push path, and starts the hoocowork server on port 8080.
 
 ## What gets deployed
 
 | Resource | Detail |
 |---|---|
-| Shape | `VM.Standard.E2.1.Micro` — 1 OCPU, 1 GB RAM (x86_64) + 2 GB swap |
-| OS | Ubuntu 22.04 LTS |
+| Shape | `VM.Standard.A1.Flex` — 4 OCPU, 24 GB RAM (ARM64). Set `instance_shape = "VM.Standard.E2.1.Micro"` (1 GB, x86_64, 2 GB swap added) if A1 is out of capacity |
+| OS | Ubuntu 24.04 LTS |
+| Boot volume | 100 GB (`boot_volume_size_in_gbs`; Always Free covers 200 GB total) |
 | Public IP | Reserved (static — survives VM recreation) |
 | Ports open | 22 (SSH), 80 (Caddy ACME challenge), 443 (HTTPS) — 8080 closed to public |
 | TLS | Caddy + Let's Encrypt at `https://<dashed-ip>.nip.io` (auto-renew) |
-| Service | `hoocowork.service` — `Restart=always`, `OOMPolicy=continue`, `MemoryMax=600M` |
+| Service | `hoocowork.service` — `Restart=always`, `OOMPolicy=continue`, `MemoryMax` = half of RAM (800M on E2.1.Micro) |
 | Helper | `/usr/local/bin/hoocowork-health` — status / restart / logs in one command |
 | Auto-patching | `unattended-upgrades` enabled for security updates |
 | Auto-CLI-upgrade | `upgrade-clis.timer` runs nightly (~03:00 UTC + jitter), pulls `@latest` for all five CLIs, restarts hoocowork only if its version changed |

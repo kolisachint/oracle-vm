@@ -61,14 +61,32 @@ variable "availability_domain_index" {
   default     = 0
 }
 
+variable "instance_shape" {
+  type        = string
+  description = "Compute shape. VM.Standard.A1.Flex (ARM, up to 4 OCPU / 24 GB free) or VM.Standard.E2.1.Micro (x86, 1 GB) as a fallback when A1 is out of capacity."
+  default     = "VM.Standard.A1.Flex"
+}
+
+variable "ubuntu_version" {
+  type        = string
+  description = "Canonical Ubuntu image version to look up for the chosen shape."
+  default     = "24.04"
+}
+
+variable "boot_volume_size_in_gbs" {
+  type        = number
+  description = "Boot volume size in GB. Always Free covers 200 GB of block storage in total."
+  default     = 100
+}
+
 variable "ocpus" {
   type        = number
-  description = "Number of OCPUs for the A1 Flex instance. Always Free limit is 4 total."
+  description = "Number of OCPUs for a Flex shape (ignored for E2.1.Micro). Always Free limit is 4 total."
   default     = 4
 }
 
 variable "memory_in_gbs" {
   type        = number
-  description = "RAM in GB for the A1 Flex instance. Always Free limit is 24 GB total."
+  description = "RAM in GB for a Flex shape (ignored for E2.1.Micro). Always Free limit is 24 GB total."
   default     = 24
 }

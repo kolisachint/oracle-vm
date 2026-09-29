@@ -1,6 +1,6 @@
 # Brainstorm — Oracle Cloud VM + AI CLI Setup
 
-Provisions a free **AMD E2.1.Micro** VM on Oracle Cloud Infrastructure (1 OCPU / 1 GB RAM + 2 GB swap, Always Free) with a reserved public IP and five AI CLI tools pre-installed.
+Provisions a free **Ampere A1.Flex** VM on Oracle Cloud Infrastructure (4 OCPU / 24 GB RAM, ARM64, Always Free; E2.1.Micro available as a fallback) with a reserved public IP and five AI CLI tools pre-installed.
 
 ## What's included
 
